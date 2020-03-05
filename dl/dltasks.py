@@ -578,7 +578,8 @@ class Login(Task):
                 # FIXME --  What we really want here is a login-by-token call
                 # to the AuthMgr so the login is recorded on the server.
                 self.login_error = None
-                return True
+                if self.dl.get("login", "status") == 'loggedin':
+                    return True
         except Exception as e:
             pass
 
@@ -590,7 +591,6 @@ class Login(Task):
             self.dl.save("login", "authtoken", '')
             self.dl.save(self.user.value, "authtoken", self.token)
             self.login_error = self.token
-            print ('login error: tok = ' + self.token)
             return False
         else:
             print ('login success: tok = ' + self.token)
@@ -1461,7 +1461,7 @@ class Get(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.get (token, fr=self.fr.value, to=self.to.value,
+        return storeClient.get (token, fr=self.fr.value, to=self.to.value,
                             verbose=self.verbose.value)
 
 
@@ -1530,7 +1530,7 @@ class Copy(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.cp (token, fr=self.fr.value, to=self.to.value,
+        return storeClient.cp (token, fr=self.fr.value, to=self.to.value,
                         verbose=self.verbose.value)
 
 

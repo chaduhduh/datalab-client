@@ -1468,7 +1468,7 @@ class storeClient(object):
 
             nfiles = len(flist)
             if nfiles < 1:
-                return 'A Node does not exist with the requested URI.'
+                return 'A input Node does not exist with the requested URI.'
 
             if debug:
                 print("get: flist = %s" % flist)
@@ -1501,31 +1501,36 @@ class storeClient(object):
                         # indicator on each.
                         dl = 0
                         done = 0
-                        with open(dlname, 'wb', 0) as fd:
-                            for chunk in r.iter_content(chunk_size=32768):
-                                dl += len(chunk)
-                                if chunk:
-                                    fd.write(chunk)
-                                if total_length > 0:
-                                    done = int(20 * dl / total_length)
+                        try:
+                            with open(dlname, 'wb', 0) as fd:
+                                for chunk in r.iter_content(chunk_size=32768):
+                                    dl += len(chunk)
+                                    if chunk:
+                                        fd.write(chunk)
+                                    if total_length > 0:
+                                        done = int(20 * dl / total_length)
 
+                                    if verbose:
+                                        # Print a progress indicator
+                                        sys.stdout.write(
+                                            "\r(%d/%d) [%s%s] [%7s] %s" % \
+                                            (fnum, nfiles, '='*done, ' '*(20-done),
+                                            sizeof_fmt(dl), f[6:]))
+                                        sys.stdout.flush()
+
+                                # Handle a zero-length file download.
                                 if verbose:
-                                    # Print a progress indicator
-                                    sys.stdout.write(
-                                        "\r(%d/%d) [%s%s] [%7s] %s" % \
-                                        (fnum, nfiles, '='*done, ' '*(20-done),
-                                        sizeof_fmt(dl), f[6:]))
-                                    sys.stdout.flush()
+                                    if dl == 0:
+                                        print("\r(%d/%d) [%s] [%7s] %s" % \
+                                            (fnum, nfiles, '=' * 20, "0 B", f[6:]))
+                                    else:
+                                        print('')
+                            fd.close()
+                            resp.append('OK')
+                        except IOError as e:
+                            print("I/O error({0}): {1}".format(e.errno, e.strerror))
+                            return
 
-                            # Handle a zero-length file download.
-                            if verbose:
-                                if dl == 0:
-                                    print("\r(%d/%d) [%s] [%7s] %s" % \
-                                        (fnum, nfiles, '=' * 20, "0 B", f[6:]))
-                                else:
-                                    print('')
-                        fd.close()
-                        resp.append('OK')
                 fnum += 1
 
             return resp
@@ -2050,7 +2055,7 @@ class storeClient(object):
             flist = expandFileList(self.svc_url, token, nm, "csv", full=True)
             nfiles = len(flist)
             if nfiles < 1:
-                return 'A Node does not exist with the requested URI.'
+                return 'A rm Node does not exist with the requested URI.'
             fnum = 1
             resp = []
             for f in flist:
