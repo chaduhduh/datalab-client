@@ -1798,6 +1798,8 @@ class queryClient (object):
 
         if fmt in ['pandas','array','structarray','table']:
             qfmt = 'csv'
+        elif fmt not in ("csv","ascii","array","pandas","structarray","table","fits","hdf5","votable"):
+            qfmt = 'csv'
         else:
             qfmt = fmt
 
@@ -1892,6 +1894,9 @@ class queryClient (object):
             strval = qcToString(resp)
             if fmt in ['pandas','array','structarray','table']:
                 return convert (strval,fmt)
+            elif fmt not in ("csv","ascii","array","pandas","structarray","table","fits","hdf5","votable"):
+                print("WARNING: The format keyword supplied was not recognized. The query output will be in the default (CSV) format.")
+                return strval
             else:
                 return strval
 
