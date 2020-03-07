@@ -1425,6 +1425,10 @@ class storeClient(object):
               debug=False):
         '''Implementation of the get() method.
         '''
+        if fr == '' or fr is None:
+            return "Missing source file input."
+        if to == '' or to is None:
+            return "Missing destination file input"
 
         def sizeof_fmt(num):
             '''Local pretty-printer for file sizes.
@@ -1468,7 +1472,7 @@ class storeClient(object):
 
             nfiles = len(flist)
             if nfiles < 1:
-                return 'A input Node does not exist with the requested URI.'
+                return 'A Node does not exist with the requested URI.'
 
             if debug:
                 print("get: flist = %s" % flist)
@@ -1488,7 +1492,10 @@ class storeClient(object):
                                    headers=hdrs)
 
                 if res.status_code != 200:
-                    resp.append("Error: " + scToString(res.text))
+                    if scToString(res.text) == 'A Node does not exist with the requested URI':
+                        resp.append("Error: Source file does not exist.")
+                    else:
+                        resp.append("Error: " + scToString(res.text))
                 else:
                     r = requests.get(res.text, stream=True)
                     if r.status_code != 200:
@@ -1528,7 +1535,7 @@ class storeClient(object):
                             fd.close()
                             resp.append('OK')
                         except IOError as e:
-                            print("I/O error({0}): {1}".format(e.errno, e.strerror))
+                            print("Destination location error: {0}".format(e.strerror))
                             return
 
                 fnum += 1
@@ -1597,6 +1604,10 @@ class storeClient(object):
     def _put(self, token=None, fr='', to='vos://', verbose=True, debug=False):
         '''Implementation of the put() method.
         '''
+        if fr == '' or fr is None:
+            return "Missing source file input."
+        elif 'vos://' in fr:
+            return "Cannot copy remote file, use cp() instead."
         tok = def_token(token)
         user, uid, gid, hash = tok.strip().split('.', 3)
         hdrs = {'Content-Type': 'text/ascii',
@@ -1626,10 +1637,11 @@ class storeClient(object):
             #pstat = stat(to)
             #ptype = pstat.get('type')
             ptype = stat(to).get('type')
-            if ptype is None:
-                return ['Error: target directory not exist']
-            elif ptype != 'container':
-                return ['Error: target must be a container']
+            if ptype is None or ptype != 'container':
+                dname = (to if to.count("://") > 0 else to[:-1])
+                self._mkdir(token=token, name=dname)
+        elif nfiles == 0:
+            return ['Error: source directory or file not exist']
 
         fnum = 1
         resp = []
@@ -1766,6 +1778,10 @@ class storeClient(object):
     def _cp(self, token=None, fr='', to='', verbose=False):
         '''Implementation of the cp() method.
         '''
+        if fr == '' or fr is None:
+            return "Missing source file input."
+        if to == '' or to is None:
+            return "Missing destination file input"
         # Patch the names with the URI prefix if needed.
         fr_rem = fr.count("://") > 0
         to_rem = to.count("://") > 0
@@ -1917,6 +1933,8 @@ class storeClient(object):
     def _mkdir(self, token=None, name=''):
         '''Implementation of the mkdir() method.
         '''
+        if name == '' or name is None:
+            return "Missing directory input."
         nm = (name if name.count("://") > 0 else ("vos://" + name))
         if nm and nm[-1] == '/': nm = nm[:-1]
 
@@ -1927,7 +1945,7 @@ class storeClient(object):
             else: return 'OK'
         except Exception:
             raise storeClientError(r.content)
-        else:
+        finally:
             return 'OK'
 
 
@@ -1961,6 +1979,11 @@ class storeClient(object):
     def _mv(self, token=None, fr='', to='', verbose=False):
         '''Implementation of the mv() method.
         '''
+        if fr == '' or fr is None:
+            return "Missing source file input."
+        if to == '' or to is None:
+            return "Missing destination file input"
+
         # Patch the names with the URI prefix if needed.
         fr_rem = fr.count("://") > 0
         to_rem = to.count("://") > 0
@@ -2002,6 +2025,14 @@ class storeClient(object):
                 fnum += 1
                 if 'COMPLETED' in scToString(r.content):
                     resp.append("OK")
+                elif scToString(r.content) == 'A Node already exists with the requested URI':
+                    resp.append('Destination filename already exists')
+                elif scToString(r.content) == 'A Node does not exist with the requested URI':
+                    resp.append('Source file or path does not exist')
+                elif scToString(r.content) == 'The parent node is not valid':
+                    resp.append('Destination folder does not exist')
+                elif scToString(r.content) == 'The parent node is not valid':
+                    resp.append('Destination folder does not exist')
                 else:
                     resp.append(scToString(r.content))
             return resp
@@ -2055,7 +2086,7 @@ class storeClient(object):
             flist = expandFileList(self.svc_url, token, nm, "csv", full=True)
             nfiles = len(flist)
             if nfiles < 1:
-                return 'A rm Node does not exist with the requested URI.'
+                return 'A Node does not exist with the requested URI.'
             fnum = 1
             resp = []
             for f in flist:

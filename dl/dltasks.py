@@ -802,6 +802,7 @@ class Query2 (Task):
         sql = None
         adql = None
         res = None
+        fmt_list = ("csv","ascii","array","pandas","structarray","table","fits","hdf5","votable")
 
         if self.adql.value is None or self.adql.value == '':
             if self.sql.value is None or self.sql.value == '':
@@ -825,6 +826,9 @@ class Query2 (Task):
             if self.profile.value != "" and self.profile.value is not None:
                 queryClient.set_profile (profile=self.profile.value)
 
+        if self.fmt.value not in fmt_list:
+            print("WARNING: The format keyword supplied was not recognized. The query output will be in the default (CSV) format.")
+            self.fmt.value = 'csv'
         # Workarounds for the "async" option to the query using getattr().
         try:
             res = queryClient.query (token, adql=adql, sql=sql,
@@ -835,6 +839,8 @@ class Query2 (Task):
                 print (res)                         # Return the JobID
             elif self.out.value== '' or self.out.value is None:
                 print (res)                         # Return the results
+            else:
+                print (res)
         except Exception as e:
             if not getattr(self,"async").value and str(e) is not None:
                 err = str(e)
@@ -1484,7 +1490,7 @@ class Put(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.put (token, fr=self.fr.value, to=self.to.value,
+        return storeClient.put (token, fr=self.fr.value, to=self.to.value,
                             verbose=self.verbose.value)
 
 
@@ -1507,7 +1513,7 @@ class Move(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.mv (token, fr=self.fr.value, to=self.to.value,
+        return storeClient.mv (token, fr=self.fr.value, to=self.to.value,
                         verbose=self.verbose.value)
 
 
@@ -1530,8 +1536,14 @@ class Copy(Task):
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.cp (token, fr=self.fr.value, to=self.to.value,
+        res = storeClient.cp (token, fr=self.fr.value, to=self.to.value,
                         verbose=self.verbose.value)
+        if res == 'A Node does not exist with the requested URI':
+            return 'The source file does not exist in the vospace location.'
+        elif res == 'A Node already exists with the requested URI':
+            return 'The filename already exists in the vospace destination location.'
+        else:
+            return res
 
 
 class Delete(Task):
@@ -1550,7 +1562,7 @@ class Delete(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.rm (token, name=self.name.value, verbose=self.verbose.value)
+        return storeClient.rm (token, name=self.name.value, verbose=self.verbose.value)
 
 
 class Link(Task):
@@ -1604,7 +1616,7 @@ class MkDir(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.mkdir (token, name=self.name.value)
+        return storeClient.mkdir (token, name=self.name.value)
 
 
 class RmDir(Task):
@@ -1620,7 +1632,7 @@ class RmDir(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.rmdir (token, name=self.name.value)
+        return storeClient.rmdir (token, name=self.name.value)
 
 
 class Resolve(Task):
