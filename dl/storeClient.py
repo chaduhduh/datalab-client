@@ -1429,6 +1429,8 @@ class storeClient(object):
             return "Missing source file input."
         if to == '' or to is None:
             return "Missing destination file input"
+        if to.startswith('vos://'):
+            return "Destination cannot be vospace, use cp() instead"
 
         def sizeof_fmt(num):
             '''Local pretty-printer for file sizes.
