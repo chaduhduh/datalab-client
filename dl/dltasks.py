@@ -1582,7 +1582,7 @@ class Link(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.ln (token, fr=self.fr.value, target=self.to.value)
+        return storeClient.ln (token, fr=self.fr.value, target=self.to.value)
 
 
 class Tag(Task):
@@ -1601,7 +1601,7 @@ class Tag(Task):
 
     def run(self):
         token = getUserToken(self)
-        storeClient.tag (token, name=self.name.value, tag=self.tag.value)
+        return storeClient.tag (token, name=self.name.value, tag=self.tag.value)
 
 
 class MkDir(Task):
