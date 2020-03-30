@@ -2217,7 +2217,10 @@ class queryClient (object):
                     s = f.read()
                 params['schema'] = s
             else:
-                params['schema'] = schema
+                if (schema.endswith('.txt')):
+                    return schema + ' does not exist.'
+                else:
+                    params['schema'] = schema
 
         elif isinstance (schema,collections.OrderedDict):
             # We can't use a regular 'dict' object because the key ordered isn't
@@ -2226,11 +2229,10 @@ class queryClient (object):
             for i in schema:
                s += i + ',' + schema[i] + '\n'
             params['schema'] = s
-
         r = requests.post (dburl, params=params, headers=headers)
 
-        if r.content[:5].lower() == 'error':
-            raise queryClientError (qcToString(r.content))
+        if 'error' in qcToString(r.content).lower():
+            return qcToString(r.content)
         else:
             return 'OK'
 
@@ -2315,7 +2317,7 @@ class queryClient (object):
         if verbose or self.debug:
             print (str(r.text))
 
-        if r.content[:5].lower() == 'error':
+        if 'error' in str(r.content).lower():
             raise queryClientError (qcToString(r.content))
         else:
             return 'OK'
@@ -2352,7 +2354,6 @@ class queryClient (object):
         dburl = '%s/import' % (self.svc_url)
         if self.svc_profile != "default":
             dburl += "&profile=%s" % self.svc_profile
-
         # Data can be the name of a CSV file or a python tablular object that
         # can be converted.
         tmp_file = NamedTemporaryFile(delete=True, dir='/tmp').name
@@ -2361,7 +2362,6 @@ class queryClient (object):
                    'drop' : str(drop),
                    'profile' : self.svc_profile,
                    'csv_header' : str(csv_header) }
-
         if isinstance (data, str):
             if data.startswith ('http://') or \
                data.startswith ('https://') or \
@@ -2369,12 +2369,14 @@ class queryClient (object):
                     # Passing a URI in the filename to be loaded on server-side
                     params['filename'] = data
 
-            elif os.path.exists (data):
-                # Upload the file to the staging area.
-                data_name = os.path.basename (data)
-                storeClient.chunked_upload (token, data, data_name)
-                params['filename'] = data_name
-
+            elif data.endswith('.csv'):
+                if os.path.exists (data):
+                    # Upload the file to the staging area.
+                    data_name = os.path.basename (data)
+                    storeClient.chunked_upload (token, data, data_name)
+                    params['filename'] = data_name
+                else:
+                    return data + ' does not exist.'
             else:
                 # Upload the CSV string to the staging area.
                 with open (tmp_file, 'w') as f:
@@ -2401,14 +2403,12 @@ class queryClient (object):
 
         # Execute the service call.
         r = requests.post (dburl, params=params, headers=headers)
-
         if verbose or self.debug:
             print (qcToString (r.content))
         if tmp_file is not None and os.path.exists(tmp_file):
             os.remove(tmp_file)
-
-        if r.content[:5].lower() == 'error' or r.status_code != 200:
-            raise queryClientError (qcToString(r.content))
+        if 'error' in str(r.content).lower() or r.status_code != 200:
+            return qcToString(r.content)
         else:
             return 'OK'
 
@@ -2438,7 +2438,7 @@ class queryClient (object):
             dburl += "&profile=%s" % self.svc_profile
 
         r = requests.get (dburl, headers=headers)
-        if r.content[:5].lower() == 'error':
+        if 'error' in str(r.content).lower():
             return qcToString(r.content)
         else:
             return 'OK'
@@ -2488,19 +2488,15 @@ class queryClient (object):
             pool = ThreadPool(processes=1)
             dburl = '%s/index' % self.svc_url
             res = pool.apply_async (async_call, (dburl, params, headers))
-            return 'OK'
+            return res
         else:
             dburl = '%s/index?tbl=%s&col=%s' % (self.svc_url, table, column)
             if q3c is not None:
                 dburl += '&q3c=%s&cluster=%s' % (q3c, cluster)
             if self.svc_profile != "default":
                 dburl += "&profile=%s" % self.svc_profile
-
             r = requests.get (dburl, headers=headers)
-            if r.content[:5].lower() == 'error':
-                return qcToString(r.content)
-            else:
-                return 'OK'
+            return qcToString(r.content)
 
 
 
@@ -2530,7 +2526,7 @@ class queryClient (object):
             dburl += "&profile=%s" % self.svc_profile
 
         r = requests.get (dburl, headers=headers)
-        if r.content[:5].lower() == 'error':
+        if 'error' in str(r.content).lower():
             return qcToString(r.content)
         else:
             return 'OK'
@@ -2563,7 +2559,7 @@ class queryClient (object):
             dburl += "&profile=%s" % self.svc_profile
 
         r = requests.get (dburl, headers=headers)
-        if r.content[:5].lower() == 'error':
+        if 'error' in str(r.content).lower():
             return qcToString(r.content)
         else:
             return 'OK'
@@ -2596,7 +2592,7 @@ class queryClient (object):
 
         r = requests.get (dburl, headers=headers)
 
-        if r.content[:5].lower() == 'error':
+        if 'error' in str(r.content).lower():
             return qcToString(r.content)
         else:
             return 'OK'

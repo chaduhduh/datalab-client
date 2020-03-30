@@ -1043,7 +1043,7 @@ class ListMyDB(Task):
     def run(self):
         token = getUserToken(self)
         try:
-            res = queryClient.list (token=token, table=self.table.value)
+            res = queryClient.mydb_list (token=token, table=self.table.value)
         except Exception as e:
             print ("Error listing MyDB tables: " % str(e))
         else:
@@ -1063,10 +1063,11 @@ class DropMyDB(Task):
     def run(self):
         token = getUserToken(self)
         try:
-            queryClient.drop (token, table=self.table.value)
+            res = queryClient.mydb_drop (token, self.table.value)
         except Exception as e:
             print ("Error dropping table '%s': %s" % (self.table.value, str(e)))
-
+        else:
+            print(res)
 
 class MyDB_List(Task):
     '''
@@ -1228,7 +1229,7 @@ class MyDB_Truncate(Task):
     def run(self):
         token = getUserToken(self)
         try:
-            res = queryClient.mydb_truncate (token, table=self.table.value)
+            res = queryClient.mydb_truncate (token, self.table.value)
         except Exception as e:
             print ("Error truncating table '%s': %s" % \
                    (self.table.value,str(e)))
