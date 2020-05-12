@@ -35,6 +35,7 @@ from subprocess import Popen, PIPE
 from time import gmtime, strftime, sleep
 import httplib2
 from optparse import Values
+import getpass
 
 # raw_input() was renamed input() in python3
 try:
@@ -71,6 +72,8 @@ version = "2.2.0"                  		# VOS version
 ANON_TOKEN = "anonymous.0.0.anon_access"        # default tokens
 DEMO_TOKEN = "dldemo.99999.99999.demo_access"
 TEST_TOKEN = "dltest.99998.99998.test_access"
+
+ANON_TOKEN_WARNING = "'anonymous' user has no vos and no mydb. Please log in to Data Lab first using 'datalab login'"
 
 
 # Data Lab Client interfaces
@@ -492,10 +495,10 @@ class Login(Task):
         Task.__init__(self, datalab, 'login', 'Login to the Data Lab')
         self.addOption("user",
                 Option("user", "", "Username of account in Data Lab",
-                        required=True))
+                        required=False))
         self.addOption("password",
                 Option("password", "", "Password for account in Data Lab",
-                        required=True))
+                        required=False))
         self.addOption("mount",
                 Option("mount", "", "Mountpoint of remote Virtual Storage"))
         self.addStdOptions()
@@ -533,6 +536,10 @@ class Login(Task):
                     # Log a user into the Data Lab
                     print ("Welcome back to the Data Lab, %s" % self.user.value)
         else:
+            if self.user.value == '':
+                self.user.value = input("user (default: None): ")
+            if self.password.value == '':
+                self.password.value = getpass.getpass("password (default: None): ")
             # If we're not logged in, do so using the name/password provided.
             if self.do_login() != "OK":
                 print (self.login_error)
@@ -582,6 +589,7 @@ class Login(Task):
                     return True
         except Exception as e:
             pass
+
 
         # Get the security token for the user
         self.token = authClient.login (self.user.value,self.password.value)
@@ -829,6 +837,7 @@ class Query2 (Task):
         if self.fmt.value not in fmt_list:
             print("WARNING: The format keyword supplied was not recognized. The query output will be in the default (CSV) format.")
             self.fmt.value = 'csv'
+
         # Workarounds for the "async" option to the query using getattr().
         try:
             res = queryClient.query (token, adql=adql, sql=sql,
@@ -1042,10 +1051,16 @@ class ListMyDB(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if (self.verbose.value == 'True'):
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_list (token=token, table=self.table.value)
         except Exception as e:
-            print ("Error listing MyDB tables: " % str(e))
+            if (self.verbose.value == 'True'):
+                print ("Error listing MyDB tables: " % str(e))
+            sys.exit(1)
         else:
             print (res)
 
@@ -1062,12 +1077,19 @@ class DropMyDB(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_drop (token, self.table.value)
         except Exception as e:
-            print ("Error dropping table '%s': %s" % (self.table.value, str(e)))
+            if self.verbose.value == 'True':
+                print ("Error dropping table '%s': %s" % (self.table.value, str(e)))
+            sys.exit(1)
         else:
-            print(res)
+            if self.verbose.value == 'True':
+                print(res)
 
 class MyDB_List(Task):
     '''
@@ -1081,10 +1103,16 @@ class MyDB_List(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if (self.verbose.value == 'True'):
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_list (token, table=self.table.value)
         except Exception as e:
-            print ("Error listing MyDB tables: %s" % str(e))
+            if (self.verbose.value == 'True'):
+                print ("Error listing MyDB tables: %s" % str(e))
+            sys.exit(1)
         else:
             print (res)
 
@@ -1101,12 +1129,19 @@ class MyDB_Drop(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_drop (token, self.table.value)
         except Exception as e:
-            print ("Error dropping table '%s': %s" % (self.table.value,str(e)))
+            if self.verbose.value == 'True':
+                print ("Error dropping table '%s': %s" % (self.table.value,str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 class MyDB_Create(Task):
@@ -1123,13 +1158,20 @@ class MyDB_Create(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_create (token, self.table.value,
                                            self.schema.value)
         except Exception as e:
-            print ("Error creating table '%s': %s" % (self.table.value,str(e)))
+            if self.verbose.value == 'True':
+                print ("Error creating table '%s': %s" % (self.table.value,str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 class MyDB_Import(Task):
@@ -1147,14 +1189,21 @@ class MyDB_Import(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_import (token, self.table.value,
                                            self.data.value)
         except Exception as e:
-            print ("Error importing table '%s': %s" % \
+            if self.verbose.value == 'True':
+                print ("Error importing table '%s': %s" % \
                      (self.table.value, str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 class MyDB_Insert(Task):
@@ -1172,13 +1221,20 @@ class MyDB_Insert(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_import (token, self.table.value,
                                            self.data.value)
         except Exception as e:
-            print ("Error importing table '%s': %s" % (self.table.value,str(e)))
+            if self.verbose.value == 'True':
+                print ("Error importing table '%s': %s" % (self.table.value,str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 class MyDB_Index(Task):
@@ -1203,6 +1259,10 @@ class MyDB_Index(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_index (token, self.table.value,
                                            self.column.value, 
@@ -1210,9 +1270,12 @@ class MyDB_Index(Task):
                                            cluster=self.cluster.value,
                                            async_=self.async_.value)
         except Exception as e:
-            print ("Error indexing table '%s': %s" % (self.table.value,str(e)))
+            if self.verbose.value == 'True':
+                print ("Error indexing table '%s': %s" % (self.table.value,str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 class MyDB_Truncate(Task):
@@ -1228,13 +1291,20 @@ class MyDB_Truncate(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_truncate (token, self.table.value)
         except Exception as e:
-            print ("Error truncating table '%s': %s" % \
+            if self.verbose.value == 'True':
+                print ("Error truncating table '%s': %s" % \
                    (self.table.value,str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 class MyDB_Rename(Task):
@@ -1251,12 +1321,19 @@ class MyDB_Rename(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_rename(token, self.old.value, self.new.value)
         except Exception as e:
-            print ("Error renaming table '%s': %s" % (self.old.value,str(e)))
+            if self.verbose.value == 'True':
+                print ("Error renaming table '%s': %s" % (self.old.value,str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 class MyDB_Copy(Task):
@@ -1264,7 +1341,7 @@ class MyDB_Copy(Task):
         Copy a user MyDB table.
     '''
     def __init__(self, datalab):
-        Task.__init__(self, datalab, 'mydb_rename', 'Rename a user MyDB table')
+        Task.__init__(self, datalab, 'mydb_copy', 'Copy a user MyDB table')
         self.addOption("source",
             Option("source", "", "Original table name", required=True))
         self.addOption("target",
@@ -1273,13 +1350,20 @@ class MyDB_Copy(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         try:
             res = queryClient.mydb_copy (token, self.source.value,
                                          self.target.value)
         except Exception as e:
-            print ("Error copying table '%s': %s" % (self.old.value,str(e)))
+            if self.verbose.value == 'True':
+                print ("Error copying table '%s': %s" % (self.old.value,str(e)))
+            sys.exit(1)
         else:
-            print (res)
+            if self.verbose.value == 'True':
+                print (res)
 
 
 
@@ -1445,6 +1529,10 @@ class List(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         return storeClient.ls (token, name=self.name.value,
             format=self.format.value)
 
@@ -1461,15 +1549,22 @@ class Get(Task):
         self.addOption("to",
             Option("to", "", "Local disk file name", required=False,
                 default="./"))
-        self.addOption("verbose",
-            Option("verbose", "", "Verbose output?", required=False,
-                default=True))
+
         self.addStdOptions()
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.get (token, fr=self.fr.value, to=self.to.value,
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+
+        res =storeClient.get (token, fr=self.fr.value, to=self.to.value,
                             verbose=self.verbose.value)
+        if self.verbose.value == 'True':
+            print(res)
+        if res != 'OK':
+            sys.exit(1)
 
 
 class Put(Task):
@@ -1484,15 +1579,21 @@ class Put(Task):
         self.addOption("to",
             Option("to", "", "Remote Data Lab file name", required=True,
                 default=""))
-        self.addOption("verbose",
-            Option("verbose", "", "Verbose output?", required=False,
-                default=True))
+
         self.addStdOptions()
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.put (token, fr=self.fr.value, to=self.to.value,
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+        res = storeClient.put (token, fr=self.fr.value, to=self.to.value,
                             verbose=self.verbose.value)
+        if self.verbose.value == 'True':
+            print(res)
+        if res != 'OK':
+            sys.exit(1)
 
 
 class Move(Task):
@@ -1507,15 +1608,22 @@ class Move(Task):
         self.addOption("to",
             Option("to", "", "Destination location in Data Lab",
                 required=True, default=""))
-        self.addOption("verbose",
-            Option("verbose", "", "Verbose output?", required=False,
-                default=True))
+
         self.addStdOptions()
 
     def run(self):
+        print(self.verbose.value)
         token = getUserToken(self)
-        return storeClient.mv (token, fr=self.fr.value, to=self.to.value,
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+        res = storeClient.mv (token, fr=self.fr.value, to=self.to.value,
                         verbose=self.verbose.value)
+        if self.verbose.value == 'True':
+            print(res)
+        if res != 'OK':
+            sys.exit(1)
 
 
 class Copy(Task):
@@ -1530,21 +1638,27 @@ class Copy(Task):
         self.addOption("to",
             Option("to", "", "Destination location in Data Lab",
                 required=True, default=""))
-        self.addOption("verbose",
-            Option("verbose", "", "Verbose output?", required=False,
-                default=True))
         self.addStdOptions()
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         res = storeClient.cp (token, fr=self.fr.value, to=self.to.value,
                         verbose=self.verbose.value)
         if res == 'A Node does not exist with the requested URI':
-            return 'The source file does not exist in the vospace location.'
+            if self.verbose.value == 'True':
+                print('The source file does not exist in the vospace location.')
+            sys.exit(1)
         elif res == 'A Node already exists with the requested URI':
-            return 'The filename already exists in the vospace destination location.'
+            if self.verbose.value == 'True':
+                print('The filename already exists in the vospace destination location.')
+            sys.exit (1)
         else:
-            return res
+            if self.verbose.value == 'True':
+                print(res)
 
 
 class Delete(Task):
@@ -1552,18 +1666,23 @@ class Delete(Task):
         Delete files in Data Lab
     '''
     def __init__(self, datalab):
-        Task.__init__(self, datalab, 'delete', 'delete a file in Data Lab')
+        Task.__init__(self, datalab, 'rm', 'delete a file in Data Lab')
         self.addOption("name",
             Option("name", "", "File in Data Lab to delete", required=True,
                 default=""))
-        self.addOption("verbose",
-            Option("verbose", "", "Verbose output?", required=False,
-                default=True))
         self.addStdOptions()
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.rm (token, name=self.name.value, verbose=self.verbose.value)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+        res = storeClient.rm (token, name=self.name.value, verbose=self.verbose.value)
+        if self.verbose.value == 'True':
+            print(res)
+        if res != 'OK':
+            sys.exit(1)
 
 
 class Link(Task):
@@ -1582,7 +1701,15 @@ class Link(Task):
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.ln (token, fr=self.fr.value, target=self.to.value)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+        res = storeClient.ln (token, fr=self.fr.value, target=self.to.value)
+        if self.verbose.value == 'True':
+            print(res)
+        if res != 'OK':
+            sys.exit(1)
 
 
 class Tag(Task):
@@ -1601,7 +1728,15 @@ class Tag(Task):
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.tag (token, name=self.name.value, tag=self.tag.value)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+        res = storeClient.tag (token, name=self.name.value, tag=self.tag.value)
+        if self.verbose.value == 'True':
+            print(res)
+        if res != 'OK':
+            sys.exit(1)
 
 
 class MkDir(Task):
@@ -1617,7 +1752,20 @@ class MkDir(Task):
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.mkdir (token, name=self.name.value)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+        res = storeClient.mkdir (token, name=self.name.value)
+        if self.verbose.value == 'True':
+            if res == 201:
+                print('OK')
+            elif res == 409:
+                print('A Node already exists with the requested URI')
+            else:
+                print('Failed to create the directory')
+        if res != 201:
+            sys.exit(1)
 
 
 class RmDir(Task):
@@ -1633,7 +1781,15 @@ class RmDir(Task):
 
     def run(self):
         token = getUserToken(self)
-        return storeClient.rmdir (token, name=self.name.value)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
+        res = storeClient.rmdir (token, name=self.name.value)
+        if self.verbose.value == 'True':
+            print(res)
+        if res != 'OK':
+            sys.exit(1)
 
 
 class Resolve(Task):
@@ -1650,8 +1806,15 @@ class Resolve(Task):
 
     def run(self):
         token = getUserToken(self)
+        if token == ANON_TOKEN:
+            if self.verbose.value == 'True':
+                print(ANON_TOKEN_WARNING)
+            sys.exit(1)
         r = requests.get(SM_URL + "resolve?name=%s" %
                          self.name.value, headers={'X-DL-AuthToken': token})
+        if self.verbose.value == 'True':
+            print(r)
+
 
 
 class StorageProfiles(Task):

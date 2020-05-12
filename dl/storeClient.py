@@ -1943,12 +1943,10 @@ class storeClient(object):
         try:
             r = self.getFromURL(self.svc_url, "/mkdir?dir=%s" % nm,
                                    def_token(token))
-            if r.status_code != requests.codes.created: return scToString(r.content)
-            else: return 'OK'
+
+            return r.status_code
         except Exception:
             raise storeClientError(r.content)
-        finally:
-            return 'OK'
 
 
     # --------------------------------------------------------------------
