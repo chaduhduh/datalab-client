@@ -2474,6 +2474,7 @@ def scToString(s):
                      Python versions.  If there is an error, return the
                      original.
     '''
+
     try:
         if is_py3:
             if isinstance(s,bytes):
