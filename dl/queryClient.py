@@ -2039,7 +2039,6 @@ class queryClient (object):
     # --------------------------
     # Async jobs error()
     # --------------------------
-
     @multimethod('_qc',2,True)
     def error(self, token, jobId):
         '''Usage:  queryClient.error (token, jobID)
