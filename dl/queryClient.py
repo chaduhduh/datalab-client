@@ -2307,7 +2307,7 @@ class queryClient (object):
         dburl = '%s/create' % (self.svc_url)
 
         drop = True			# drop table if exists
-        verbose = False
+
         verbose = False			# verbose output
         if 'verbose' in kw:
             verbose = kw['verbose']
@@ -2633,7 +2633,8 @@ class queryClient (object):
             dburl += "&profile=%s" % self.svc_profile
 
         r = requests.get (dburl, headers=headers)
-        if 'error' in str(r.content).lower():
+
+        if 'error' in str(r.content).lower() or 'not' in str(r.content).lower():
             return qcToString(r.content)
         else:
             return 'OK'

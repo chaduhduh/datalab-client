@@ -1142,6 +1142,9 @@ class MyDB_Drop(Task):
         else:
             if self.verbose.value == 'True':
                 print (res)
+            if res != 'OK':
+                sys.exit(1)
+
 
 
 class MyDB_Create(Task):
@@ -1286,7 +1289,7 @@ class MyDB_Truncate(Task):
         Task.__init__(self, datalab, 'mydb_truncate',
                       'Truncate a user MyDB table')
         self.addOption("table",
-            Option("table", "", "Table name to create", required=True))
+            Option("table", "", "Table name to truncate", required=True))
         self.addStdOptions()
 
     def run(self):
