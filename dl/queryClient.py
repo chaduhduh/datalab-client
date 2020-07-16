@@ -1696,6 +1696,8 @@ class queryClient (object):
     def _list_profiles(self, token=None, profile=None, format='text'):
         '''Implementation of the list_profiles() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
 
         headers = self.getHeaders (token)
 
@@ -1728,6 +1730,9 @@ class queryClient (object):
     def _schema(self, value='', format='text', profile=None, **kw):
         '''Implementation of the schema() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         if profile is None:
            profile = self.svc_profile
 
@@ -1754,6 +1759,9 @@ class queryClient (object):
                   profile='default'):
         '''Implementation of the services() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         dburl = '/services?'
         if profile is not None and profile != 'None' and profile != '':
             dburl += ("profile=%s" % profile)
@@ -1812,6 +1820,8 @@ class queryClient (object):
               async_=False, profile='default', **kw):
         '''Implementation of the query() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
 
         # Process optional keyword arguments.
         if 'async' in kw:
@@ -1981,6 +1991,9 @@ class queryClient (object):
     def _status(self, token=None, jobId=None):
         '''Implementation of the status() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/status?jobid=%s' % (self.svc_url, jobId)
@@ -2026,6 +2039,9 @@ class queryClient (object):
     def _results(self, token=None, jobId=None, delete=True):
         '''Implementation of the results() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/results?jobid=%s&delete=%s' % (self.svc_url, jobId, delete)
@@ -2066,6 +2082,9 @@ class queryClient (object):
     def _error(self, token=None, jobId=None):
         '''Implementation of the error() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/error?jobid=%s' % (self.svc_url, jobId)
@@ -2107,6 +2126,9 @@ class queryClient (object):
     def _abort(self, token=None, jobId=None):
         '''Implementation of the abort() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/abort?jobid=%s' % (self.svc_url, jobId)
@@ -2302,6 +2324,9 @@ class queryClient (object):
     def _mydb_create(self, token, table, schema, **kw):
         '''Implementation of the mydb_create() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         # Set the request headers.
         headers = self.getHeaders (token)
         headers['Content'] = 'text/ascii'
@@ -2370,6 +2395,9 @@ class queryClient (object):
     def _mydb_insert(self, token=None, table=None, data=None, **kw):
         '''Implementation of the mydb_create() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         # Get optional parameters.
         csv_header = (kw['csv_header'] if 'csv_header' in kw else True)
         verbose = (kw['drop'] if 'drop' in kw else False)
@@ -2453,6 +2481,9 @@ class queryClient (object):
     def _mydb_import(self, token=None, table=None, data=None, **kw):
         '''Implementation of the mydb_create() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         # Get optional parameters.
         csv_header = (kw['csv_header'] if 'csv_header' in kw else True)
         verbose = (kw['drop'] if 'drop' in kw else False)
@@ -2541,6 +2572,9 @@ class queryClient (object):
     def _mydb_truncate(self, token=None, table=None):
         '''Implementation of the mydb_truncate() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/truncate?table=%s' % (self.svc_url, table)
@@ -2580,6 +2614,9 @@ class queryClient (object):
                     cluster=False, async_=False):
         '''Implementation of the mydb_index() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         if async_:
@@ -2629,6 +2666,9 @@ class queryClient (object):
     def _mydb_drop(self, token=None, table=None):
         '''Implementation of the mydb_drop() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/delete?table=%s' % (self.svc_url, table)
@@ -2663,6 +2703,9 @@ class queryClient (object):
     def _mydb_rename(self, source='', target='', token=None):
         '''Implementation of the mydb_rename() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/rename?source=%s&target=%s' % (self.svc_url, source, target)
@@ -2695,6 +2738,9 @@ class queryClient (object):
     def _mydb_copy(self, source='', target='', token=None):
         '''Implementation of the mydb_copy() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         dburl = '%s/copy?source=%s&target=%s' % (self.svc_url, source, target)
