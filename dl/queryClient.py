@@ -2267,6 +2267,9 @@ class queryClient (object):
     def _mydb_list(self, token=None, table=None, index=False):
         '''Implementation of the mydb_list() method.
         '''
+        if not qc_client.isAlive():
+            raise queryClientError("The Query Manager is temporarily disabled for maintenance. Thank you for your patience.")
+
         headers = self.getHeaders (token)
 
         if table is None:

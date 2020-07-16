@@ -1059,7 +1059,7 @@ class ListMyDB(Task):
             res = queryClient.mydb_list (token=token, table=self.table.value)
         except Exception as e:
             if (self.verbose.value == 'True'):
-                print ("Error listing MyDB tables: " % str(e))
+                print (str(e))
             sys.exit(1)
         else:
             print (res)
