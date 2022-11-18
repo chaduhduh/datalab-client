@@ -6,8 +6,9 @@
 from __future__ import print_function
 
 __authors__ = 'Mike Fitzpatrick <mike.fitzpatrick@noirlab.edu>, Data Lab <datalab@noirlab.edu>'
+
 try:
-    import authmanager.__version__
+    from . import __version__
 except ImportError as e:
     from __version__ import __version__
 
