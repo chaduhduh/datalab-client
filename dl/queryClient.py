@@ -113,11 +113,20 @@ import sys
 import collections
 import ast, csv
 import pandas
+from typing import List
+from functools import partial
 from tempfile import NamedTemporaryFile
 
 from dl import resClient
 from dl import storeClient
 from dl.helpers.utils import convert
+from dl.xmatch.http import XMatchRequest
+from dl.xmatch.table import XMatchTable
+from dl.xmatch.search_types import (
+    XMatchSearchType,
+    AllMatches,
+    NearestNeighbor
+)
 if os.path.isfile('./Util.py'):			# use local dev copy
     from Util import multimethod
     from Util import def_token, is_auth_token, split_auth_token
@@ -652,6 +661,60 @@ def status(token=None, jobId=None, profile='default'):
     '''
     return qc_client._status (token=def_token(token), jobId=jobId,
                               profile=profile)
+
+
+def xmatch(tables: List[XMatchTable]=None, dl_table=dict(), radius=5,
+           search_type: XMatchSearchType=AllMatches()):
+    #TODO: check if we should always be computing the dist arcsec col
+    #TODO: enhance validation, validate as many params as possible prior to
+    #      starting the background process, output_cols and ra dec would be nice
+    #      to validate prior to starting the job
+    #TODO: for vospace files do qc.mydb_import("testimportnew",
+    #       qc.mydb_import('testresult2','vos://newmags.csv')
+    #TODO: wire up the different types of output options, during initial dev we
+    #      are just using a string output
+    #TODO: recommend an import step instead of auto import to favor code (aka
+    #      cell re runability. We are needlessly creating DBs for cross matches
+    #      when users might already have the DB. If they already ran it, now
+    #      they need to refactor the code to get it again). Using certain
+    #      syntax we can avoid it but I think it is suboptimal. Also the import
+    #      has a lot of features that we would either need to wrap existing
+    #      import code. We might as well have the users import and prepare
+    #      their tables just as if they were running a query since all xmatches
+    #      will use q3c.
+    for xmt in tables:
+        xmt.prepare(
+            csv_file=partial(
+                qc_client._mydb_import, # pylint: disable=protected-access
+                token=None,
+                table=xmt.import_name,
+                data=xmt.name
+            )
+        )
+        # TODO: figure out this error:
+        # Error converting tempfile /tmp/1003_smash-test-data.csv: [Errno 2] No
+        # such file or directory: '/tmp/1003_smash-test-data.csv' And see why
+        # the file upload isn't working. We might need to bind mount the tmp
+        # directory
+
+    url = f"{qc_client.get_svc_url()}/xmatch"
+    request_data = XMatchRequest.format(
+        tables,
+        dl_table,
+        search_type,
+        radius
+    )
+    r = requests.post(
+        url=url,
+        json=request_data,
+        headers={
+            'X-DL-AuthToken': def_token(None)
+        },
+        timeout=30
+    )
+
+    print(r.content)
+
 
 
 # --------------------------------------------------------------------

@@ -48,3 +48,7 @@ zz.*
 
 # Mac OSX
 .DS_Store
+
+# environment files
+env/
+.env
