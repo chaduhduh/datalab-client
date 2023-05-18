@@ -666,9 +666,6 @@ def status(token=None, jobId=None, profile='default'):
 def xmatch(tables: List[XMatchTable]=None, dl_table=dict(), radius=5,
            search_type: XMatchSearchType=AllMatches()):
     #TODO: check if we should always be computing the dist arcsec col
-    #TODO: enhance validation, validate as many params as possible prior to
-    #      starting the background process, output_cols and ra dec would be nice
-    #      to validate prior to starting the job
     #TODO: for vospace files do qc.mydb_import("testimportnew",
     #       qc.mydb_import('testresult2','vos://newmags.csv')
     #TODO: wire up the different types of output options, during initial dev we

@@ -20,4 +20,3 @@ class ConfigMissing(XMatchException):
     Indicates that the required config is missing from a call
     """
     message = 'No configuration  file was provided.'
-

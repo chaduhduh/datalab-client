@@ -1,3 +1,4 @@
+import os
 from typing import List
 from .exceptions import XMatchException
 
@@ -26,6 +27,22 @@ class TableTypes:
         elif table_name[0] == "/" or ".csv" in table_name.lower():
             table_type = TableTypes.CSV_FILE
         return table_type
+
+    @classmethod
+    def base_name(cls, table_name: str=""):
+        """
+        Return the base name of the table as determined by the type of table
+        """
+        base = table_name
+        table_type = cls.detect_type(table_name)
+        if table_type == cls.MYDB:
+            base = table_name.replace("mydb://", "")
+        elif table_type == cls.VOS:
+            base = table_name.replace("vos://", "")
+        elif table_type == cls.CSV_FILE:
+            _, file = os.path.split(table_name)
+            base = file
+        return base
 
 
 class XMatchTable():
@@ -91,3 +108,17 @@ class XMatchTable():
             dec=self.dec,
             import_name=self.import_name
         )
+
+    def use_all_cols(self):
+        """
+        Returns True if the table should output all columns such as tables that
+        don't specify output columns or have output columns set to ['all]
+        """
+        return (self.output_cols[0].lower() == 'all')
+
+    def base_name(self):
+        """
+        Return the base name of the table, logic varies depending on the type
+        of table
+        """
+        return TableTypes.base_name(self.name)
