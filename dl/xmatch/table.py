@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Callable
 from .exceptions import XMatchException
 
 
@@ -76,16 +76,23 @@ class XMatchTable():
             t_symbol = "://"
         return self.name.replace(t_symbol, delimeter)
 
-    def prepare(self, csv_file=lambda x: ""):
+    def prepare(self, csv_file: Callable=lambda x: None,
+                vos_file: Callable=lambda x: None):
         """ prepare tables for cross match as needed """
+        #TODO: using an import_name param simplifies the implementation
+        #       we could probably make this automatic but might need temp
+        #       tables or a numbered table system and might leave many
+        #       unwanted artifacts
+        #TODO: we don't want to wrap all of our import features, we should
+        #      consider this a "simple" import and favor our normal table
+        #      preparation tools for more complex import tasks
+        prepare_call = None
         if self.table_type == TableTypes.CSV_FILE:
-            #TODO: using an import_name param simplifies the implementation
-            #       we could probably make this automatic but might need temp
-            #       tables or a numbered table system and might leave many
-            #       unwanted artifacts
-            #TODO: we don't want to wrap all of our import features, we should
-            #      consider this a "simple" import and favor our normal table 
-            #      preparation tools for more complex import tasks
+            prepare_call = csv_file
+        if self.table_type == TableTypes.VOS:
+            prepare_call = vos_file
+
+        if prepare_call:
             try:
                 csv_file()
             except Exception as exc:
@@ -94,7 +101,6 @@ class XMatchTable():
                     f"{self.name}. Ensure that the file exists and "
                     f"the mydb table name '{self.import_name}' isn't taken"
                 )) from exc
-
             self.set_name(f"mydb://{self.import_name}")
 
     def request_format(self):
@@ -114,7 +120,7 @@ class XMatchTable():
         Returns True if the table should output all columns such as tables that
         don't specify output columns or have output columns set to ['all]
         """
-        return (self.output_cols[0].lower() == 'all')
+        return self.output_cols[0].lower() == 'all'
 
     def base_name(self):
         """

@@ -3,7 +3,10 @@ Provides various commonly used cross match functions
 """
 from typing import List
 from abc import ABC, abstractmethod
-from .table import XMatchTable
+from .table import (
+    XMatchTable,
+    TableTypes
+)
 
 
 class XMatchSearchType(ABC):
@@ -76,7 +79,11 @@ class _Q3CSearchBase(XMatchSearchType):
         for table in all_tables:
             alias = table.alias()
             for col in table.output_cols:
-                col_str = f"{alias}.{col} as {alias}_{col}"
+                col_name = f"{alias}_{col}"
+                # for Data Lab tables just output the regular col name
+                if table.table_type == TableTypes.TAPDB:
+                    col_name = col
+                col_str = f"{alias}.{col} as {col_name}"
                 col_str = f"{alias}.*" if col == "all" else col_str
                 output_cols.append(col_str)
 

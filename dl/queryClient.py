@@ -665,9 +665,9 @@ def status(token=None, jobId=None, profile='default'):
 
 def xmatch(tables: List[XMatchTable]=None, dl_table=dict(), radius=5,
            search_type: XMatchSearchType=AllMatches()):
-    #TODO: check if we should always be computing the dist arcsec col
     #TODO: for vospace files do qc.mydb_import("testimportnew",
     #       qc.mydb_import('testresult2','vos://newmags.csv')
+    #       something in vospace is breaking
     #TODO: wire up the different types of output options, during initial dev we
     #      are just using a string output
     #TODO: recommend an import step instead of auto import to favor code (aka
@@ -686,6 +686,11 @@ def xmatch(tables: List[XMatchTable]=None, dl_table=dict(), radius=5,
                 token=None,
                 table=xmt.import_name,
                 data=xmt.name
+            ),
+            vos_file=partial(
+                qc_client._mydb_import, # pylint: disable=protected-access
+                token=None,
+                table=xmt.import_name
             )
         )
         # TODO: figure out this error:
