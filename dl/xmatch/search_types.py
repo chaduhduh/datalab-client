@@ -43,6 +43,7 @@ class XMatchSearchType(ABC):
     def sql(self, tables: List[XMatchTable]=None,
                  dl_table: XMatchTable=None, degrees=0.0) -> str:
         """ Generate a full SQL query """
+        raise NotImplementedError("Search types must implement sql()")
 
     def request_format(self) -> str:
         """Returns the search options for this type instance as dict"""
