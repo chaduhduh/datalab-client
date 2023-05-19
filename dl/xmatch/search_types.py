@@ -39,6 +39,11 @@ class XMatchSearchType(ABC):
         """Generate the where SQL for a search type"""
         raise NotImplementedError("Search types must implement where_sql()")
 
+    @abstractmethod
+    def sql(self, tables: List[XMatchTable]=None,
+                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+        """ Generate a full SQL query """
+
     def request_format(self) -> str:
         """Returns the search options for this type instance as dict"""
         return {}
@@ -105,6 +110,38 @@ class _Q3CSearchBase(XMatchSearchType):
         """ Generate SQL JOIN clause """
         # by default we don't use join criteria
         return ""
+
+    def sql(self, tables: List[XMatchTable]=None,
+                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+        """ Output full SQL for Q3C Query """
+        output_cols = self.col_sql(
+            tables=tables,
+            dl_table=dl_table
+        )
+        from_clause = self.from_sql(
+            tables=tables,
+            dl_table=dl_table
+        )
+        join_clause = self.join_sql(
+            tables=tables,
+            dl_table=dl_table,
+            degrees=degrees
+        )
+        where_clause = self.where_sql(
+            tables=tables,
+            dl_table=dl_table,
+            degrees=degrees
+        )
+
+        return f'''
+            SELECT
+                {output_cols}
+            FROM
+                {from_clause}
+                {join_clause}
+            WHERE
+                {where_clause}
+        '''
 
 
 class NearestNeighbor(_Q3CSearchBase):
