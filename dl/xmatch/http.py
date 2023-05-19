@@ -9,6 +9,7 @@ from .search_types import (
     AllMatches
 )
 
+
 class XMatchRequest:
     """
     various REST related utility functions for the XMatch
@@ -60,7 +61,8 @@ class XMatchRequest:
     @staticmethod
     def format(tables: List[XMatchTable]=None, dl_table: XMatchTable=None,
                   search_type: XMatchSearchType=AllMatches(),
-                  radius: float=5):
+                  radius: float=5, async_: bool=True,
+                  output_options: dict=None):
         """
         Returns XMatch objects in request format
         """
@@ -69,7 +71,9 @@ class XMatchRequest:
             dl_table=None,
             radius=radius,
             search_type="",
-            search_options=dict()
+            search_options=dict(),
+            async_=async_,
+            output_options=output_options
         )
 
         if tables:

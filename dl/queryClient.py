@@ -663,8 +663,9 @@ def status(token=None, jobId=None, profile='default'):
                               profile=profile)
 
 
-def xmatch(tables: List[XMatchTable]=None, dl_table=dict(), radius=5,
-           search_type: XMatchSearchType=AllMatches()):
+def xmatch(tables: List[XMatchTable]=None, dl_table={}, radius=5,
+           search_type: XMatchSearchType=AllMatches(), async_=True,
+           output_options: dict={}):
     #TODO: for vospace files do qc.mydb_import("testimportnew",
     #       qc.mydb_import('testresult2','vos://newmags.csv')
     #       something in vospace is breaking
@@ -698,14 +699,16 @@ def xmatch(tables: List[XMatchTable]=None, dl_table=dict(), radius=5,
         # such file or directory: '/tmp/1003_smash-test-data.csv' And see why
         # the file upload isn't working. We might need to bind mount the tmp
         # directory
-
     url = f"{qc_client.get_svc_url()}/xmatch"
     request_data = XMatchRequest.format(
         tables,
         dl_table,
         search_type,
-        radius
+        radius,
+        async_,
+        output_options
     )
+
     r = requests.post(
         url=url,
         json=request_data,
