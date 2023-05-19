@@ -666,11 +666,6 @@ def status(token=None, jobId=None, profile='default'):
 def xmatch(tables: List[XMatchTable]=None, dl_table={}, radius=5,
            search_type: XMatchSearchType=AllMatches(), async_=True,
            output_options: dict={}):
-    #TODO: for vospace files do qc.mydb_import("testimportnew",
-    #       qc.mydb_import('testresult2','vos://newmags.csv')
-    #       something in vospace is breaking
-    #TODO: wire up the different types of output options, during initial dev we
-    #      are just using a string output
     #TODO: recommend an import step instead of auto import to favor code (aka
     #      cell re runability. We are needlessly creating DBs for cross matches
     #      when users might already have the DB. If they already ran it, now
