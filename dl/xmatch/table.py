@@ -1,5 +1,5 @@
 import os
-from typing import List, Callable
+from typing import Callable
 from .exceptions import XMatchException
 
 
@@ -51,13 +51,20 @@ class XMatchTable():
     of crossmatches
     """
     def __init__(self, table_name: str, output_cols: list=None,
-                 ra: str="ra", dec: str="dec", import_name: str=""):
+                 ra: str="ra", dec: str="dec", import_name: str="",
+                 error_circle: str=None, major_axis:str =None,
+                 axis_ratio: str=None, pos_angle: str=None
+                 ):
         self.name = table_name
         self.output_cols = output_cols if output_cols else ["all"]
         self.table_type = TableTypes.detect_type(table_name)
         self.ra = ra
         self.dec = dec
         self.import_name = import_name
+        self.error_circle = error_circle
+        self.major_axis = major_axis
+        self.axis_ratio = axis_ratio
+        self.pos_angle = pos_angle
 
     def set_name(self, name):
         """
@@ -112,7 +119,11 @@ class XMatchTable():
             output_cols=self.output_cols,
             ra=self.ra,
             dec=self.dec,
-            import_name=self.import_name
+            import_name=self.import_name,
+            error_circle=self.error_circle,
+            major_axis=self.major_axis,
+            axis_ratio=self.axis_ratio,
+            pos_angle=self.pos_angle
         )
 
     def use_all_cols(self):

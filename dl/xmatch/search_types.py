@@ -7,6 +7,7 @@ from .table import (
     XMatchTable,
     TableTypes
 )
+from .conversions import arcs_to_deg
 
 
 class XMatchSearchType(ABC):
@@ -17,36 +18,36 @@ class XMatchSearchType(ABC):
 
     @abstractmethod
     def col_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         """Generate the column SQL for a search type"""
         raise NotImplementedError("Search types must implement col_sql()")
 
     @abstractmethod
     def from_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         """Generate the from SQL for a search type"""
         raise NotImplementedError("Search types must implement from_sql()")
 
     @abstractmethod
     def join_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         """Generate the join SQL for a search type """
         raise NotImplementedError("Search types must implement join_sql()")
 
     @abstractmethod
     def where_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                  dl_table: XMatchTable=None) -> str:
         """Generate the where SQL for a search type"""
         raise NotImplementedError("Search types must implement where_sql()")
 
     @abstractmethod
     def sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+            dl_table: XMatchTable=None) -> str:
         """ Generate a full SQL query """
         raise NotImplementedError("Search types must implement sql()")
 
-    def request_format(self) -> str:
-        """Returns the search options for this type instance as dict"""
+    def options(self) -> dict:
+        """Returns the instances search options as a dict"""
         return {}
 
 
@@ -75,7 +76,7 @@ class _Q3CSearchBase(XMatchSearchType):
         return ",\n".join(dist_cols)
 
     def col_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         """
         Given a set of user tables and DL table generate the appropriate
         column SQL
@@ -98,7 +99,7 @@ class _Q3CSearchBase(XMatchSearchType):
         return ",\n".join(output_cols)
 
     def from_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         """ Generate SQL FROM clause """
         froms = []
         all_tables = tables if not dl_table else tables + [dl_table]
@@ -107,13 +108,13 @@ class _Q3CSearchBase(XMatchSearchType):
         return ",\n".join(froms)
 
     def join_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         """ Generate SQL JOIN clause """
         # by default we don't use join criteria
         return ""
 
     def sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+            dl_table: XMatchTable=None) -> str:
         """ Output full SQL for Q3C Query """
         output_cols = self.col_sql(
             tables=tables,
@@ -125,13 +126,11 @@ class _Q3CSearchBase(XMatchSearchType):
         )
         join_clause = self.join_sql(
             tables=tables,
-            dl_table=dl_table,
-            degrees=degrees
+            dl_table=dl_table
         )
         where_clause = self.where_sql(
             tables=tables,
-            dl_table=dl_table,
-            degrees=degrees
+            dl_table=dl_table
         )
 
         return f'''
@@ -147,24 +146,31 @@ class _Q3CSearchBase(XMatchSearchType):
 
 class NearestNeighbor(_Q3CSearchBase):
     """
-    Run a nearest neighbor type of cross match
+    Find the nearest neighbors in the given radius
     """
     type_key = "nearest_neighbor"
 
-    def __init__(self, exclude_non_matches: bool=False):
+    def __init__(self, radius: float=5, exclude_non_matches: bool=False,
+                 use_error_col: bool=None):
+        self.radius = arcs_to_deg(radius)
         self.exclude_non_matches = exclude_non_matches
+        self.use_error_col = use_error_col
 
     def join_sql(self, tables: List[XMatchTable]=None,
-                   dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         wheres = []
         match_t = dl_table if dl_table else tables[-1]
         targets = tables[:-1] if not dl_table and len(tables) > 1 else tables
         for table in targets:
             alias = table.alias()
             m_alias = f"{match_t.alias()}_sub_{alias}"
-            j_type = "INNER" if self.exclude_non_matches else "LEFT"
+            j_type = "INNER JOIN" if self.exclude_non_matches else "LEFT JOIN"
+            null_join = "ON true" if self.exclude_non_matches else "ON true"
+            search_deg = self.radius
+            if self.use_error_col:
+                search_deg = table.error_circle
             wheres.append(f'''
-                {j_type} JOIN LATERAL (
+                {j_type} LATERAL (
                     SELECT
                         {m_alias}.*
                     FROM
@@ -173,7 +179,7 @@ class NearestNeighbor(_Q3CSearchBase):
                             {alias}.{table.ra}, {alias}.{table.dec},
                             {m_alias}.{match_t.ra},
                             {m_alias}.{match_t.dec},
-                            {degrees}
+                            {search_deg}
                         )
                     ORDER BY
                         q3c_dist(
@@ -182,39 +188,79 @@ class NearestNeighbor(_Q3CSearchBase):
                             {m_alias}.{match_t.dec}
                         )
                     ASC LIMIT 1
-                ) as {match_t.alias()} ON true = true
+                ) as {match_t.alias()} {null_join}
             ''')
-            # TODO: this "on true" part was carried over from other code but
-            # might not be working as intended. We might need to remove the on
-            # true part when we "exclude_non_matches" is set to true
         return "\nAND\n".join(wheres)
 
     def from_sql(self, tables: List[XMatchTable]=None,
-                 dl_table: XMatchTable=None, degrees=0.0) -> str:
+                 dl_table: XMatchTable=None) -> str:
         froms = []
-        for table in tables:
+        targets = tables[:-1] if not dl_table and len(tables) > 1 else tables
+        for table in targets:
             froms.append(f"{table.name} as {table.alias()}")
         return ",\n".join(froms)
 
     def where_sql(self, tables: List[XMatchTable]=None,
-                   dl_table: XMatchTable=None, degrees=0.0) -> str:
+                   dl_table: XMatchTable=None) -> str:
         # nearest neighbor relies an join so a WHERE clause isn't necessary
         return "1=1"
 
-    def request_format(self) -> str:
+    def options(self):
+        """Returns the instances search options as a dict"""
         return dict(
-            exclude_non_matches=True
+            radius=self.radius,
+            exclude_non_matches=self.exclude_non_matches,
+            use_error_col=self.use_error_col
         )
 
 
 class AllMatches(_Q3CSearchBase):
     """
-    Find all matches in the given radius
+    Find all matches in the given spherical radius
     """
-    type_key = "all_matches"
+    type_key = "all_matches_spherical"
+
+    def __init__(self, radius: float=5., use_error_circle: bool=False) -> None:
+        super().__init__()
+        self.radius = arcs_to_deg(radius)
+        self.use_error_circle = use_error_circle
+
+    def options(self) -> dict:
+        return dict(
+            radius=self.radius,
+            use_error_circle=self.use_error_circle
+            )
 
     def where_sql(self, tables: List[XMatchTable]=None,
-                   dl_table: XMatchTable=None, degrees=0.0) -> str:
+                  dl_table: XMatchTable=None) -> str:
+        wheres = []
+        match_t = dl_table if dl_table else tables[-1]
+        targets = tables[:-1] if not dl_table and len(tables) > 1 else tables
+        for table in targets:
+            alias = table.alias()
+            m_alias = match_t.alias()
+            search_deg = self.radius
+            if self.use_error_circle:
+                search_deg = f"{alias}.{table.error_circle}"
+            wheres.append(f'''
+                q3c_join(
+                    {alias}.{table.ra}, {alias}.{table.dec},
+                    {m_alias}.{match_t.ra}, {m_alias}.{match_t.dec},
+                    {search_deg}
+                )
+            ''')
+        return "\nAND\n".join(wheres)
+
+
+class AllMatchesEllipse(_Q3CSearchBase):
+    """
+    Find all matches in the given ellipse based on the provided semi-major
+    axis, axis ratio and position angle.
+    """
+    type_key = "all_matches_ellipse"
+
+    def where_sql(self, tables: List[XMatchTable]=None,
+                  dl_table: XMatchTable=None) -> str:
         wheres = []
         match_t = dl_table if dl_table else tables[-1]
         targets = tables[:-1] if not dl_table and len(tables) > 1 else tables
@@ -222,10 +268,11 @@ class AllMatches(_Q3CSearchBase):
             alias = table.alias()
             m_alias = match_t.alias()
             wheres.append(f'''
-                q3c_join(
+                q3c_ellipse_join(
                     {alias}.{table.ra}, {alias}.{table.dec},
                     {m_alias}.{match_t.ra}, {m_alias}.{match_t.dec},
-                    {degrees}
+                    {alias}.{table.major_axis}, {alias}.{table.axis_ratio},
+                    {alias}.{table.pos_angle}
                 )
             ''')
         return "\nAND\n".join(wheres)

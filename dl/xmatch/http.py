@@ -39,7 +39,6 @@ class XMatchRequest:
         if not xm_data:
             return False, "request body must be valid JSON"
         # make the data easier to work with
-
         user_tables = xm_data.get('tables', [])
         dl_table = xm_data.get('dl_table', None)
         all_tables = user_tables if not dl_table else user_tables + [dl_table]
@@ -61,15 +60,13 @@ class XMatchRequest:
     @staticmethod
     def format(tables: List[XMatchTable]=None, dl_table: XMatchTable=None,
                   search_type: XMatchSearchType=AllMatches(),
-                  radius: float=5, async_: bool=True,
-                  output_options: dict=None):
+                  async_: bool=True, output_options: dict=None):
         """
         Returns XMatch objects in request format
         """
         data = dict(
             tables=[],
             dl_table=None,
-            radius=radius,
             search_type="",
             search_options=dict(),
             async_=async_,
@@ -83,7 +80,7 @@ class XMatchRequest:
             data["dl_table"] = dl_table.request_format()
 
         data["search_type"] = search_type.type_key
-        data["search_options"] = search_type.request_format()
+        data["search_options"] = search_type.options()
 
         return data
 

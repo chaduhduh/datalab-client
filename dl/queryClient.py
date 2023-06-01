@@ -663,7 +663,7 @@ def status(token=None, jobId=None, profile='default'):
                               profile=profile)
 
 
-def xmatch(tables: List[XMatchTable]=None, dl_table={}, radius=5,
+def xmatch(tables: List[XMatchTable]=None, dl_table={},
            search_type: XMatchSearchType=AllMatches(), async_=True,
            output_options: dict={}):
     #TODO: recommend an import step instead of auto import to favor code (aka
@@ -699,7 +699,6 @@ def xmatch(tables: List[XMatchTable]=None, dl_table={}, radius=5,
         tables,
         dl_table,
         search_type,
-        radius,
         async_,
         output_options
     )
