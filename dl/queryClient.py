@@ -122,6 +122,8 @@ from dl import storeClient
 from dl.helpers.utils import convert
 from dl.xmatch.http import XMatchRequest
 from dl.xmatch.table import XMatchTable
+from dl.xmatch.job import Job
+from dl.xmatch.exceptions import XMatchException
 from dl.xmatch.search_types import (
     XMatchSearchType,
     AllMatches,
@@ -187,7 +189,6 @@ if os.path.exists('/tmp/RM_SVC_URL'):
 
 # Default sync query timeout default (300sec)
 DEF_TIMEOUT_REQUEST = 300
-
 
 
 # ####################################################################
@@ -665,7 +666,7 @@ def status(token=None, jobId=None, profile='default'):
 
 def xmatch(tables: List[XMatchTable]=None, dl_table={},
            search_type: XMatchSearchType=AllMatches(), async_=True,
-           output_options: dict={}):
+           output_options: dict={}) -> Job:
     #TODO: recommend an import step instead of auto import to favor code (aka
     #      cell re runability. We are needlessly creating DBs for cross matches
     #      when users might already have the DB. If they already ran it, now
@@ -679,13 +680,13 @@ def xmatch(tables: List[XMatchTable]=None, dl_table={},
         xmt.prepare(
             csv_file=partial(
                 qc_client._mydb_import, # pylint: disable=protected-access
-                token=None,
+                token=def_token(None),
                 table=xmt.import_name,
                 data=xmt.name
             ),
             vos_file=partial(
                 qc_client._mydb_import, # pylint: disable=protected-access
-                token=None,
+                token=def_token(None),
                 table=xmt.import_name
             )
         )
@@ -711,8 +712,15 @@ def xmatch(tables: List[XMatchTable]=None, dl_table={},
         },
         timeout=30
     )
+    if not r.status_code == 200:
+        raise XMatchException(f"{r}")
 
-    print(r.content)
+    if async_:
+        return Job(
+            id=r.content.decode("UTF-8"),
+            qc=qc_client
+            )
+    return r.content
 
 
 
@@ -2865,7 +2873,6 @@ class queryClient (object):
                 data_name = os.path.basename (fname)
                 storeClient.chunked_upload (token, fname, data_name)
                 params['filename'] = data_name
-
             else:
                 # Upload the CSV string to the staging area.
                 try:
