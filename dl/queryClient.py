@@ -126,8 +126,7 @@ from dl.xmatch.job import Job
 from dl.xmatch.exceptions import XMatchException
 from dl.xmatch.search_types import (
     XMatchSearchType,
-    AllMatches,
-    NearestNeighbor
+    AllMatches
 )
 if os.path.isfile('./Util.py'):			# use local dev copy
     from Util import multimethod
@@ -667,16 +666,19 @@ def status(token=None, jobId=None, profile='default'):
 def xmatch(tables: List[XMatchTable]=None, dl_table={},
            search_type: XMatchSearchType=AllMatches(), async_=True,
            output_options: dict={}) -> Job:
-    #TODO: recommend an import step instead of auto import to favor code (aka
-    #      cell re runability. We are needlessly creating DBs for cross matches
-    #      when users might already have the DB. If they already ran it, now
-    #      they need to refactor the code to get it again). Using certain
-    #      syntax we can avoid it but I think it is suboptimal. Also the import
-    #      has a lot of features that we would either need to wrap existing
-    #      import code. We might as well have the users import and prepare
-    #      their tables just as if they were running a query since all xmatches
-    #      will use q3c.
-    for xmt in tables:
+    #TODO: we probably need to thread and reserve a jobid
+    for i, xmt in enumerate(tables):
+        # we only need to q3c index the last table
+        index_db = None
+        if not dl_table and i+1 == len(tables):
+            index_db = partial(
+                qc_client._mydb_index, # pylint: disable=protected-access
+                def_token(None),
+                xmt.mydb_name(),
+                '',
+                q3c=f"{xmt.ra},{xmt.dec}",
+                cluster=True
+            )
         xmt.prepare(
             csv_file=partial(
                 qc_client._mydb_import, # pylint: disable=protected-access
@@ -688,13 +690,14 @@ def xmatch(tables: List[XMatchTable]=None, dl_table={},
                 qc_client._mydb_import, # pylint: disable=protected-access
                 token=def_token(None),
                 table=xmt.import_name
-            )
+            ),
+            on_import=index_db
         )
-        # TODO: figure out this error:
-        # Error converting tempfile /tmp/1003_smash-test-data.csv: [Errno 2] No
-        # such file or directory: '/tmp/1003_smash-test-data.csv' And see why
-        # the file upload isn't working. We might need to bind mount the tmp
-        # directory
+
+    csv_formats = ['pandas', 'array', 'structarray', 'table', 'csv-noheader']
+    if output_options.get("ofmt") in csv_formats:
+        output_options['ofmt'] = 'csv'
+
     url = f"{qc_client.get_svc_url()}/xmatch"
     request_data = XMatchRequest.format(
         tables,
@@ -710,10 +713,10 @@ def xmatch(tables: List[XMatchTable]=None, dl_table={},
         headers={
             'X-DL-AuthToken': def_token(None)
         },
-        timeout=30
+        timeout=1800
     )
     if not r.status_code == 200:
-        raise XMatchException(f"{r}")
+        raise queryClientError(f"{r.content}")
 
     if async_:
         return Job(
