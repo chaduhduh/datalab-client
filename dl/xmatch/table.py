@@ -73,6 +73,16 @@ class XMatchTable():
         self.name = name
         self.table_type = TableTypes.detect_type(self.name)
 
+    def mydb_name(self):
+        """
+        Return the table name as if it was a mydb table (for a mydb table this
+        will be the same as the name)
+        """
+        mydb_name = self.name
+        if self.table_type in [TableTypes.CSV_FILE, TableTypes.VOS]:
+            mydb_name = f"mydb://{self.import_name}"
+        return mydb_name
+
     def alias(self):
         """
         return a suitable alias for the provided table name
@@ -83,16 +93,13 @@ class XMatchTable():
             t_symbol = "://"
         return self.name.replace(t_symbol, delimeter)
 
-    def prepare(self, csv_file: Callable=lambda x: None,
-                vos_file: Callable=lambda x: None):
+    def prepare(self, csv_file: Callable=None,
+                vos_file: Callable=None,
+                on_import: Callable=None):
         """ prepare tables for cross match as needed """
-        #TODO: using an import_name param simplifies the implementation
-        #       we could probably make this automatic but might need temp
-        #       tables or a numbered table system and might leave many
-        #       unwanted artifacts
-        #TODO: we don't want to wrap all of our import features, we should
-        #      consider this a "simple" import and favor our normal table
-        #      preparation tools for more complex import tasks
+        #TODO: if no import name is provided use the filename but remove
+        #       the unwanted characters
+        #TODO: accept pandas dataframe as a table type
         prepare_call = None
         if self.table_type == TableTypes.CSV_FILE:
             prepare_call = csv_file
@@ -101,14 +108,26 @@ class XMatchTable():
 
         if prepare_call:
             try:
-                csv_file()
+                prepare_call()
             except Exception as exc:
                 raise XMatchException((
                     "Error encoutered during the import process of "
                     f"{self.name}. Ensure that the file exists and "
                     f"the mydb table name '{self.import_name}' isn't taken"
                 )) from exc
-            self.set_name(f"mydb://{self.import_name}")
+
+        self.set_name(self.mydb_name())
+        if prepare_call and on_import:
+            try:
+                on_import()
+                print(f"Table {self.name} imported and indexed successfully")
+            except Exception as exc:
+                raise XMatchException((
+                    "Error encoutered during the post import process. Usually "
+                    "this is an indication that the table wasn't indexed "
+                    "properly"
+                )) from exc
+
 
     def request_format(self):
         """
