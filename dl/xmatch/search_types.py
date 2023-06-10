@@ -3,6 +3,7 @@ Provides various commonly used cross match functions
 """
 from typing import List
 from abc import ABC, abstractmethod
+
 from .table import (
     XMatchTable,
     TableTypes
@@ -39,6 +40,12 @@ class XMatchSearchType(ABC):
                   dl_table: XMatchTable=None) -> str:
         """Generate the where SQL for a search type"""
         raise NotImplementedError("Search types must implement where_sql()")
+
+    @abstractmethod
+    def order_sql(self, tables: List[XMatchTable]=None,
+            dl_table: XMatchTable=None) -> str:
+        """Generate the order by SQL for a search type"""
+        raise NotImplementedError("Search types must implement order_sql()")
 
     @abstractmethod
     def sql(self, tables: List[XMatchTable]=None,
@@ -113,6 +120,12 @@ class _Q3CSearchBase(XMatchSearchType):
         # by default we don't use join criteria
         return ""
 
+    def order_sql(self, tables: List[XMatchTable]=None,
+                 dl_table: XMatchTable=None) -> str:
+        """ Generate SQL JOIN clause """
+        # by default we don't use join criteria
+        return ""
+
     def sql(self, tables: List[XMatchTable]=None,
             dl_table: XMatchTable=None) -> str:
         """ Output full SQL for Q3C Query """
@@ -132,6 +145,10 @@ class _Q3CSearchBase(XMatchSearchType):
             tables=tables,
             dl_table=dl_table
         )
+        order_clause = self.order_sql(
+            tables=tables,
+            dl_table=dl_table
+        )
 
         return f'''
             SELECT
@@ -141,8 +158,8 @@ class _Q3CSearchBase(XMatchSearchType):
                 {join_clause}
             WHERE
                 {where_clause}
+            {order_clause}
         '''
-
 
 class NearestNeighbor(_Q3CSearchBase):
     """
@@ -220,15 +237,18 @@ class AllMatches(_Q3CSearchBase):
     """
     type_key = "all_matches_spherical"
 
-    def __init__(self, radius: float=5., use_error_circle: bool=False) -> None:
+    def __init__(self, radius: float=5., use_error_circle: bool=False,
+                 sort: str="ascending") -> None:
         super().__init__()
         self.radius = arcs_to_deg(radius)
         self.use_error_circle = use_error_circle
+        self.sort = sort
 
     def options(self) -> dict:
         return dict(
             radius=self.radius,
-            use_error_circle=self.use_error_circle
+            use_error_circle=self.use_error_circle,
+            sort=self.sort
             )
 
     def where_sql(self, tables: List[XMatchTable]=None,
@@ -250,6 +270,24 @@ class AllMatches(_Q3CSearchBase):
                 )
             ''')
         return "\nAND\n".join(wheres)
+
+    def order_sql(self, tables: List[XMatchTable] = None,
+                  dl_table: XMatchTable = None) -> str:
+        orders = []
+        match_t = dl_table if dl_table else tables[-1]
+        targets = tables[:-1] if not dl_table and len(tables) > 1 else tables
+        sorting = "DESC" if self.sort.lower() == "descending" else "ASC"
+        for table in targets:
+            alias = table.alias()
+            m_alias = match_t.alias()
+            orders.append(f'''
+                q3c_dist(
+                    {alias}.{table.ra}, {alias}.{table.dec},
+                    {m_alias}.{match_t.ra},
+                    {m_alias}.{match_t.dec}
+                ) {sorting}
+            ''')
+        return "ORDER BY"+str(",\n".join(orders))
 
 
 class AllMatchesEllipse(_Q3CSearchBase):
